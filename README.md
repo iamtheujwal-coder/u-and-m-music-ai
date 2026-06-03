@@ -26,7 +26,7 @@ Turn your raw voice into a studio-quality song. Record from home. Upload your vo
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | Next.js 14+ (App Router), TypeScript |
+| Frontend | Next.js 16 (App Router), TypeScript |
 | Styling | Tailwind CSS 4, custom design system |
 | Animations | Framer Motion |
 | State | Zustand |

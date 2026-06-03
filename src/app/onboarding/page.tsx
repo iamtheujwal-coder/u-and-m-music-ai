@@ -32,9 +32,13 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('profiles').update({
-          full_name: data.artistName,
+          name: data.artistName,
+          artist_name: data.artistName,
+          music_style: data.musicStyles,
+          singing_language: data.language,
+          skill_level: data.skillLevel,
+          main_goal: data.mainGoal,
           onboarding_completed: true,
-          // Store additional data in metadata or specific columns if added to schema
         }).eq('id', user.id);
       }
       setLoading(false);

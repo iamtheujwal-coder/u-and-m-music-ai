@@ -45,8 +45,9 @@ export default function DashboardPage() {
       // Load user profile
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase.from('profiles').select('full_name, credits').eq('id', user.id).single();
-        if (profile?.full_name) setArtistName(profile.full_name);
+        const { data: profile } = await supabase.from('profiles').select('artist_name, name, credits').eq('id', user.id).single();
+        if (profile?.artist_name) setArtistName(profile.artist_name);
+        else if (profile?.name) setArtistName(profile.name);
         
         // Load projects
         const res = await fetch('/api/projects');
