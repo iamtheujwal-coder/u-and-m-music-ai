@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         mood: body.mood || "",
         mastering_style: body.mastering_style || "clean",
         vocal_file_url: body.vocal_file_url || null,
-        status: "draft",
+        status: body.vocal_file_url ? "processing" : "draft",
       }
     ])
     .select()

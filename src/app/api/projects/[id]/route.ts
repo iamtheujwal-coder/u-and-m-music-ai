@@ -28,6 +28,44 @@ export async function GET(
   return NextResponse.json({ project });
 }
 
+// PATCH /api/projects/[id] — Update project status / details
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const updates: any = {};
+    if (body.status) updates.status = body.status;
+    if (body.output_file_url) updates.output_file_url = body.output_file_url;
+    if (body.mastering_style) updates.mastering_style = body.mastering_style;
+
+    const { data: project, error } = await supabase
+      .from("projects")
+      .update(updates)
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ project });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 400 });
+  }
+}
+
 // DELETE /api/projects/[id] — Delete project
 export async function DELETE(
   request: Request,
