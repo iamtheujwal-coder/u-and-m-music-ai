@@ -79,10 +79,14 @@ function AudioPlayer({
   const feedbackRef = useRef<GainNode | null>(null);
   const [webAudioActive, setWebAudioActive] = useState(false);
 
-  // Determine current active URL to load
+  // Determine current active URL to load with a public fallback demo if URL is empty/null
+  const fallbackUrl = "https://kudivkkrmgraypstkgot.supabase.co/storage/v1/object/public/audio_uploads/demo-vocal.mp3";
+  const finalVocalUrl = vocalFileUrl || fallbackUrl;
+  const finalOutputUrl = outputFileUrl || finalVocalUrl;
+
   const activeUrl = beforeAfter === "before" 
-    ? vocalFileUrl 
-    : (outputFileUrl || vocalFileUrl);
+    ? finalVocalUrl 
+    : finalOutputUrl;
 
   // When activeUrl changes, update audio src
   useEffect(() => {
@@ -461,7 +465,7 @@ function ProjectDetailContent() {
   }, [processing, id, project?.vocal_file_url]);
 
   const handleDownload = (type: "mp3" | "wav") => {
-    const fileUrl = project?.output_file_url || project?.vocal_file_url;
+    const fileUrl = project?.output_file_url || project?.vocal_file_url || "https://kudivkkrmgraypstkgot.supabase.co/storage/v1/object/public/audio_uploads/demo-vocal.mp3";
     if (!fileUrl) return;
 
     const link = document.createElement("a");

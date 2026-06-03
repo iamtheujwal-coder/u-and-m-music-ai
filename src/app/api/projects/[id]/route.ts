@@ -25,6 +25,8 @@ export async function GET(
     return NextResponse.json({ error: error?.message || "Project not found" }, { status: 404 });
   }
 
+  console.log("PROJECT LOADED:", JSON.stringify(project, null, 2));
+
   return NextResponse.json({ project });
 }
 
