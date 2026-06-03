@@ -78,6 +78,7 @@ function AudioPlayer({
   const delayRef = useRef<DelayNode | null>(null);
   const feedbackRef = useRef<GainNode | null>(null);
   const [webAudioActive, setWebAudioActive] = useState(false);
+  const [useWebAudio, setUseWebAudio] = useState(true);
 
   // Determine current active URL to load with a public fallback demo if URL is empty/null
   const fallbackUrl = "https://kudivkkrmgraypstkgot.supabase.co/storage/v1/object/public/audio_uploads/demo-vocal.mp3";
@@ -93,7 +94,7 @@ function AudioPlayer({
     if (!audioRef.current) return;
     const wasPlaying = playing;
     const prevTime = audioRef.current.currentTime;
-    
+
     audioRef.current.src = activeUrl || "";
     audioRef.current.load();
     
@@ -104,7 +105,27 @@ function AudioPlayer({
     if (wasPlaying && activeUrl) {
       audioRef.current.play().catch(err => console.log("Play failed:", err));
     }
-  }, [activeUrl]);
+  }, [activeUrl, useWebAudio]);
+
+  const handleAudioError = () => {
+    if (!audioRef.current) return;
+    console.warn("Audio element error occurred:", audioRef.current.error);
+    
+    // If it failed with a CORS/network error and we were trying to use Web Audio,
+    // fallback to standard HTML5 playback by disabling Web Audio and removing crossOrigin.
+    if (useWebAudio) {
+      console.log("CORS/Loading error. Falling back to standard HTML5 audio playback (disabling Web Audio effects)...");
+      setUseWebAudio(false);
+      setWebAudioActive(false);
+      
+      if (audioCtxRef.current) {
+        try {
+          audioCtxRef.current.close();
+        } catch (e) {}
+        audioCtxRef.current = null;
+      }
+    }
+  };
 
   // Handle play/pause toggles
   useEffect(() => {
@@ -116,7 +137,7 @@ function AudioPlayer({
           setPlaying(false);
         });
       }
-      if (!audioCtxRef.current && vocalFileUrl) {
+      if (!audioCtxRef.current && activeUrl && useWebAudio) {
         initAudio();
       }
       if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
@@ -127,7 +148,7 @@ function AudioPlayer({
         audioRef.current.pause();
       }
     }
-  }, [playing]);
+  }, [playing, activeUrl, useWebAudio]);
 
   // Update mix when mode or style changes
   useEffect(() => {
@@ -135,7 +156,7 @@ function AudioPlayer({
   }, [beforeAfter, selectedMastering, webAudioActive]);
 
   const initAudio = () => {
-    if (!audioRef.current || audioCtxRef.current) return;
+    if (!audioRef.current || audioCtxRef.current || !useWebAudio) return;
 
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -193,7 +214,9 @@ function AudioPlayer({
       
       setWebAudioActive(true);
     } catch (err) {
-      console.warn("Web Audio API processing setup failed (likely CORS or browser security):", err);
+      console.warn("Web Audio API processing setup failed (likely CORS or browser security). Falling back to dry playback:", err);
+      setUseWebAudio(false);
+      setWebAudioActive(false);
     }
   };
 
@@ -288,10 +311,11 @@ function AudioPlayer({
     <>
       <audio
         ref={audioRef}
-        crossOrigin="anonymous"
+        crossOrigin={useWebAudio ? "anonymous" : undefined}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleEnded}
+        onError={handleAudioError}
       />
 
       <div className="flex items-center justify-center gap-3 mb-6">
