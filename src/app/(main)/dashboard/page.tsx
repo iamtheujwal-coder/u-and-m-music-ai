@@ -11,7 +11,7 @@ import {
 
 const quickActions = [
   { title: "Create New Song", description: "Start from scratch", icon: PlusCircle, href: "/create", gradient: "from-violet-500 to-purple-500" },
-  { title: "Upload Vocal", description: "Drop in your recording", icon: Upload, href: "/create?mode=upload", gradient: "from-blue-500 to-cyan-500" },
+  { title: "Upload Vocal", description: "Drop in your recording", icon: Upload, href: "/create?mode=home_studio", gradient: "from-blue-500 to-cyan-500" },
   { title: "Train My Voice", description: "Build your Voice DNA", icon: Dna, href: "/voice-dna", gradient: "from-pink-500 to-rose-500" },
   { title: "Mix & Master", description: "Polish your track", icon: Settings2, href: "/create?mode=mix_master", gradient: "from-amber-500 to-orange-500" },
   { title: "My Projects", description: "View all projects", icon: FolderOpen, href: "/projects", gradient: "from-emerald-500 to-teal-500" },
