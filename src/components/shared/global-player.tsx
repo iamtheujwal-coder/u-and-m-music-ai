@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePlayerStore } from "@/lib/store";
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
-  Repeat, Shuffle, Heart, Share2, MoreHorizontal, Maximize2
+  Repeat, Shuffle, Heart, Share2, MoreHorizontal, Maximize2, Mic2
 } from "lucide-react";
 
 export function GlobalPlayer() {
@@ -53,16 +53,16 @@ export function GlobalPlayer() {
   };
 
   if (!currentTrack) {
-    // If no track is playing, we still show the player bar but empty
     return (
-      <div className="h-[90px] border-t border-white/10 bg-[#0A0A0A] text-zinc-500 flex items-center justify-center text-xs px-6">
+      <div className="h-[96px] border-t border-white/5 bg-zinc-950/80 backdrop-blur-2xl text-zinc-500 flex items-center justify-center text-xs px-6 z-50">
+        <Mic2 className="h-4 w-4 mr-2 opacity-50" />
         Select a track from your library to start playing
       </div>
     );
   }
 
   return (
-    <div className="h-[90px] border-t border-white/10 bg-[#0A0A0A] flex items-center justify-between px-4 lg:px-6 relative z-50">
+    <div className="h-[96px] border-t border-white/10 bg-zinc-950/70 backdrop-blur-3xl flex items-center justify-between px-4 lg:px-8 relative z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
       
       {/* Hidden Audio Element */}
       <audio
@@ -75,32 +75,32 @@ export function GlobalPlayer() {
 
       {/* Left: Track Info */}
       <div className="flex items-center gap-4 w-1/3 min-w-[200px]">
-        <div className="h-14 w-14 rounded bg-zinc-800 overflow-hidden shrink-0 relative group">
+        <div className="h-16 w-16 rounded-xl bg-zinc-900 overflow-hidden shrink-0 relative group shadow-lg ring-1 ring-white/10">
           {currentTrack.coverUrl ? (
             <img src={currentTrack.coverUrl} alt="Cover" className="h-full w-full object-cover" />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-violet-500 to-fuchsia-500" />
+            <div className="h-full w-full bg-gradient-to-br from-violet-600 to-indigo-600 animate-pulse-glow" />
           )}
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
-            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm"
           >
-            <Maximize2 className="h-4 w-4 text-white" />
+            <Maximize2 className="h-5 w-5 text-white" />
           </button>
         </div>
         <div className="overflow-hidden">
-          <p className="text-sm font-bold text-white truncate hover:underline cursor-pointer">{currentTrack.title}</p>
-          <p className="text-xs text-zinc-400 truncate hover:underline cursor-pointer">{currentTrack.artist}</p>
+          <p className="text-sm font-bold text-zinc-100 truncate hover:underline hover:text-violet-400 cursor-pointer transition-colors">{currentTrack.title}</p>
+          <p className="text-[13px] text-zinc-400 truncate hover:underline cursor-pointer">{currentTrack.artist}</p>
         </div>
-        <button className="text-zinc-400 hover:text-white transition-colors ml-2 hidden sm:block">
-          <Heart className="h-4 w-4" />
+        <button className="text-zinc-500 hover:text-violet-500 transition-colors ml-4 hidden sm:block">
+          <Heart className="h-5 w-5" />
         </button>
       </div>
 
       {/* Center: Playback Controls */}
       <div className="flex flex-col items-center max-w-[45%] w-full px-4">
-        <div className="flex items-center gap-4 mb-2">
-          <button className="text-zinc-400 hover:text-white transition-colors hidden sm:block">
+        <div className="flex items-center gap-6 mb-2">
+          <button className="text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:block">
             <Shuffle className="h-4 w-4" />
           </button>
           <button className="text-zinc-400 hover:text-white transition-colors">
@@ -109,62 +109,81 @@ export function GlobalPlayer() {
           
           <button 
             onClick={togglePlay}
-            className="h-8 w-8 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform"
+            className="h-10 w-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 hover:bg-violet-100 transition-all shadow-[0_0_15px_rgba(255,255,255,0.3)]"
           >
-            {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
+            {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-1" />}
           </button>
 
           <button className="text-zinc-400 hover:text-white transition-colors">
             <SkipForward className="h-5 w-5 fill-current" />
           </button>
-          <button className="text-zinc-400 hover:text-white transition-colors hidden sm:block">
+          <button className="text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:block">
             <Repeat className="h-4 w-4" />
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="flex items-center gap-2 w-full max-w-[600px]">
-          <span className="text-[10px] text-zinc-400 w-8 text-right">
+        <div className="flex items-center gap-3 w-full max-w-[500px] group">
+          <span className="text-[11px] font-medium text-zinc-500 w-10 text-right font-mono">
             {formatTime((progress / 100) * duration)}
           </span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={progress}
-            onChange={handleSeek}
-            className="h-1 w-full rounded-full bg-zinc-800 appearance-none accent-white hover:accent-violet-500 cursor-pointer"
-          />
-          <span className="text-[10px] text-zinc-400 w-8 text-left">
+          <div className="relative flex-1 h-1.5 flex items-center">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={progress}
+              onChange={handleSeek}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="w-full h-full bg-zinc-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 group-hover:from-violet-400 group-hover:to-indigo-300 transition-colors rounded-full relative"
+                style={{ width: `${progress}%` }}
+              >
+                {/* Thumb Dot */}
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-1/2" />
+              </div>
+            </div>
+          </div>
+          <span className="text-[11px] font-medium text-zinc-500 w-10 text-left font-mono">
             {formatTime(duration)}
           </span>
         </div>
       </div>
 
       {/* Right: Extra Controls */}
-      <div className="flex items-center justify-end gap-4 w-1/3 min-w-[150px] hidden md:flex">
-        <button className="text-zinc-400 hover:text-white transition-colors">
+      <div className="flex items-center justify-end gap-5 w-1/3 min-w-[150px] hidden md:flex">
+        <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
+          <Mic2 className="h-4 w-4" />
+        </button>
+        <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
           <Share2 className="h-4 w-4" />
         </button>
-        <button className="text-zinc-400 hover:text-white transition-colors">
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-2 ml-4">
           <button onClick={() => setMuted(!muted)} className="text-zinc-400 hover:text-white transition-colors">
             {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={muted ? 0 : volume}
-            onChange={(e) => {
-              setVolume(Number(e.target.value));
-              if (Number(e.target.value) > 0) setMuted(false);
-            }}
-            className="h-1 w-20 rounded-full bg-zinc-800 appearance-none accent-white cursor-pointer"
-          />
+          <div className="relative w-24 h-1.5 flex items-center group">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={muted ? 0 : volume}
+              onChange={(e) => {
+                setVolume(Number(e.target.value));
+                if (Number(e.target.value) > 0) setMuted(false);
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="w-full h-full bg-zinc-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-zinc-300 group-hover:bg-violet-400 transition-colors rounded-full"
+                style={{ width: `${(muted ? 0 : volume) * 100}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

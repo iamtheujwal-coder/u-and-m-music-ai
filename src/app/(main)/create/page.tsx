@@ -70,9 +70,6 @@ function CreateContent() {
           localStorage.setItem("demo_profile", JSON.stringify(profile));
           window.dispatchEvent(new Event('profileUpdated'));
         }
-        // Instead of navigating away to a project page, we could stay here,
-        // but the prompt is "make like all this", and Suno doesn't navigate away. 
-        // We'll let the user stay here and see the song pop up in the right panel!
         setLyrics("");
         setStyle("");
         setUploadedFile(null);
@@ -85,67 +82,71 @@ function CreateContent() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#121212]">
+    <div className="flex flex-col h-full bg-transparent">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between p-4 border-b border-white/5">
-        <div className="flex items-center gap-6 text-sm font-bold">
+      <div className="flex items-center justify-between p-6 border-b border-white/5 bg-zinc-950/20 backdrop-blur-md">
+        <div className="flex items-center gap-8 text-sm font-bold">
           <button 
             onClick={() => setActiveTab("simple")}
-            className={`transition-colors ${activeTab === "simple" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+            className={`transition-all relative pb-2 -mb-2 ${activeTab === "simple" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
           >
             Simple
+            {activeTab === "simple" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />}
           </button>
           <button 
             onClick={() => setActiveTab("advanced")}
-            className={`transition-colors ${activeTab === "advanced" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+            className={`transition-all relative pb-2 -mb-2 ${activeTab === "advanced" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
           >
             Advanced
+            {activeTab === "advanced" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />}
           </button>
           <button 
             onClick={() => setActiveTab("sounds")}
-            className={`transition-colors ${activeTab === "sounds" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+            className={`transition-all relative pb-2 -mb-2 ${activeTab === "sounds" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
           >
             Sounds
+            {activeTab === "sounds" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />}
           </button>
         </div>
-        <button className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
+        <button className="flex items-center gap-1.5 text-[11px] font-mono text-violet-300 hover:text-white transition-colors bg-violet-500/10 px-3 py-1.5 rounded-full border border-violet-500/20 shadow-inner">
           v5.5 <ChevronDown className="h-3 w-3" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 max-w-2xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8 max-w-2xl mx-auto w-full">
         
         {/* Top Buttons */}
-        <div className="grid grid-cols-3 gap-3">
-          <label className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-sm font-semibold hover:bg-zinc-800 transition-colors cursor-pointer text-white">
-            <Music className="h-4 w-4" /> + Audio
+        <div className="grid grid-cols-3 gap-4">
+          <label className="group flex items-center justify-center gap-2 bg-zinc-900/40 border border-white/5 rounded-2xl py-3.5 text-sm font-semibold hover:bg-zinc-800/80 hover:border-violet-500/30 transition-all cursor-pointer text-zinc-300 hover:text-white shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+            <Music className="h-4 w-4 group-hover:text-violet-400 transition-colors" /> + Audio
             <input type="file" accept="audio/*" className="hidden" onChange={handleFileUpload} />
           </label>
-          <button className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-sm font-semibold hover:bg-zinc-800 transition-colors text-white">
-            <Mic className="h-4 w-4" /> + Voice <span className="text-[9px] bg-pink-500 text-white px-1.5 rounded uppercase ml-1">New</span>
+          <button className="group flex items-center justify-center gap-2 bg-zinc-900/40 border border-white/5 rounded-2xl py-3.5 text-sm font-semibold hover:bg-zinc-800/80 hover:border-violet-500/30 transition-all text-zinc-300 hover:text-white shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+            <Mic className="h-4 w-4 group-hover:text-violet-400 transition-colors" /> + Voice 
+            <span className="text-[9px] bg-pink-500 text-white px-1.5 rounded uppercase ml-1 shadow-[0_0_10px_rgba(236,72,153,0.5)]">New</span>
           </button>
-          <button className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-sm font-semibold hover:bg-zinc-800 transition-colors text-white">
-            <Zap className="h-4 w-4 text-amber-500" /> + Inspo
+          <button className="group flex items-center justify-center gap-2 bg-zinc-900/40 border border-white/5 rounded-2xl py-3.5 text-sm font-semibold hover:bg-zinc-800/80 hover:border-violet-500/30 transition-all text-zinc-300 hover:text-white shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+            <Zap className="h-4 w-4 text-amber-500 group-hover:text-amber-400 transition-colors drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" /> + Inspo
           </button>
         </div>
 
         {uploadedFile && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl flex items-center justify-between text-emerald-500 text-xs">
-            <span>Audio loaded: {uploadedFile.name}</span>
-            <button onClick={() => setUploadedFile(null)} className="text-emerald-500 hover:underline">Remove</button>
+          <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl flex items-center justify-between text-emerald-400 text-xs shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+            <span className="font-medium flex items-center gap-2"><Upload className="h-3.5 w-3.5" /> Audio loaded: {uploadedFile.name}</span>
+            <button onClick={() => setUploadedFile(null)} className="text-emerald-500 hover:text-emerald-300 hover:underline transition-colors font-bold tracking-wide">Remove</button>
           </div>
         )}
 
         {/* Lyrics Area */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <button className="flex items-center gap-1.5 text-sm font-bold text-white hover:text-zinc-300">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-2">
+            <button className="flex items-center gap-1.5 text-sm font-bold text-white hover:text-violet-300 transition-colors">
               <ChevronDown className="h-4 w-4" /> Lyrics
             </button>
-            <div className="flex items-center gap-3 text-xs font-semibold">
-              <button className="text-white bg-zinc-800 px-3 py-1 rounded-full">Write</button>
-              <button className="text-zinc-400 hover:text-white">Prompt</button>
-              <button className="text-zinc-400 hover:text-white">Instrumental</button>
+            <div className="flex items-center gap-4 text-[13px] font-semibold">
+              <button className="text-white bg-white/10 px-4 py-1.5 rounded-full shadow-inner border border-white/5">Write</button>
+              <button className="text-zinc-500 hover:text-white transition-colors">Prompt</button>
+              <button className="text-zinc-500 hover:text-white transition-colors">Instrumental</button>
             </div>
           </div>
           
@@ -154,25 +155,25 @@ function CreateContent() {
               value={lyrics}
               onChange={(e) => setLyrics(e.target.value)}
               placeholder="[Verse]\nThis is where you write your rhymes\nor give our Magic Wand a try ✨\nSection [tags] can help instruct your\nsongs to feel more tight and structured"
-              className="w-full h-64 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700 resize-none leading-relaxed"
+              className="w-full h-72 bg-zinc-900/30 backdrop-blur-md border border-white/5 rounded-3xl p-5 text-[15px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 resize-none leading-relaxed shadow-inner transition-all"
             />
-            <div className="absolute bottom-4 left-4 flex gap-2">
-              <button className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors">
+            <div className="absolute bottom-5 left-5 flex gap-2">
+              <button className="p-2.5 bg-zinc-800/80 hover:bg-violet-600 text-zinc-300 hover:text-white rounded-xl transition-colors border border-white/5 hover:border-violet-500 shadow-lg">
                 <Wand2 className="h-4 w-4" />
               </button>
-              <button className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors">
+              <button className="p-2.5 bg-zinc-800/80 hover:bg-violet-600 text-zinc-300 hover:text-white rounded-xl transition-colors border border-white/5 hover:border-violet-500 shadow-lg">
                 <Sparkles className="h-4 w-4" />
               </button>
             </div>
-            <button className="absolute bottom-4 right-4 p-2 text-zinc-500 hover:text-white transition-colors">
+            <button className="absolute bottom-5 right-5 p-2.5 text-zinc-500 hover:text-white transition-colors">
               <Maximize2 className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* Style Area */}
-        <div className="space-y-2">
-          <button className="flex items-center gap-1.5 text-sm font-bold text-white hover:text-zinc-300 px-1">
+        <div className="space-y-3">
+          <button className="flex items-center gap-1.5 text-sm font-bold text-white hover:text-violet-300 transition-colors px-2">
             <ChevronDown className="h-4 w-4" /> Styles
           </button>
           
@@ -180,18 +181,23 @@ function CreateContent() {
             value={style}
             onChange={(e) => setStyle(e.target.value)}
             placeholder="double bass drum, instrumental breaks, himno, blackened death metal, a cappella"
-            className="w-full h-24 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700 resize-none leading-relaxed"
+            className="w-full h-28 bg-zinc-900/30 backdrop-blur-md border border-white/5 rounded-3xl p-5 text-[15px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 resize-none leading-relaxed shadow-inner transition-all"
           />
         </div>
 
-        <div className="pt-4">
+        <div className="pt-6 pb-20">
           <button 
             onClick={handleCreate}
             disabled={loading}
-            className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2"
+            className={`w-full relative overflow-hidden font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg border ${
+              loading 
+                ? "bg-zinc-800 border-zinc-700 text-zinc-400 cursor-not-allowed" 
+                : "bg-gradient-to-r from-violet-600 to-indigo-600 border-violet-500/50 text-white hover:shadow-[0_0_30px_rgba(139,92,246,0.4)] hover:scale-[1.01]"
+            }`}
           >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Music className="h-5 w-5" />}
-            {loading ? "Creating..." : "Create"}
+            {!loading && <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin relative z-10" /> : <Music className="h-5 w-5 relative z-10" />}
+            <span className="relative z-10 text-base">{loading ? "Creating Track..." : "Create"}</span>
           </button>
         </div>
 
