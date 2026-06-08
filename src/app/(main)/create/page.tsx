@@ -1,82 +1,81 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Mic2, Music2, Sparkles, Wand2, Settings2, ArrowRight, ArrowLeft,
-  Upload, X
-} from "lucide-react";
-import { GENRES, MOODS, MASTERING_STYLES } from "@/lib/constants";
+import { useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import { Sparkles, Music, Mic, Zap, ChevronDown, Wand2, Upload, Loader2, Maximize2, MoreHorizontal } from "lucide-react";
 
-type Mode = "home_studio" | "cover" | "original" | "ai_generate" | "mix_master";
-
-const modes = [
-  { id: "home_studio" as Mode, icon: Mic2, title: "Home Studio Mode", description: "For raw vocals recorded at home", color: "from-violet-500 to-purple-500" },
-  { id: "cover" as Mode, icon: Music2, title: "Cover Song Mode", description: "Sing over an existing instrumental", color: "from-blue-500 to-cyan-500" },
-  { id: "original" as Mode, icon: Sparkles, title: "Original Song Mode", description: "Create something brand new", color: "from-pink-500 to-rose-500" },
-  { id: "ai_generate" as Mode, icon: Wand2, title: "AI Generate Song", description: "Describe your dream song", color: "from-amber-500 to-orange-500" },
-  { id: "mix_master" as Mode, icon: Settings2, title: "Mix & Master Only", description: "Polish an existing track", color: "from-emerald-500 to-teal-500" },
-];
+type CreateTab = "simple" | "advanced" | "sounds";
 
 function CreateContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialMode = searchParams.get("mode") as Mode | null;
-  const [selectedMode, setSelectedMode] = useState<Mode | null>(initialMode);
-  const [step, setStep] = useState(initialMode ? 1 : 0);
-  const [genre, setGenre] = useState("");
-  const [mood, setMood] = useState("");
-  const [masteringStyle, setMasteringStyle] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [title, setTitle] = useState("");
-  const [dragActive, setDragActive] = useState(false);
+  const [activeTab, setActiveTab] = useState<CreateTab>("simple");
+  const [lyrics, setLyrics] = useState("");
+  const [style, setStyle] = useState("");
+  const [loading, setLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const [loading, setLoading] = useState(false);
-
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file);
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setUploadedFile(e.target.files[0]);
+    }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-    if (e.dataTransfer.files?.[0]) handleFileUpload(e.dataTransfer.files[0]);
-  };
+  const handleCreate = async () => {
+    const localProfile = localStorage.getItem("demo_profile");
+    if (localProfile) {
+      const profile = JSON.parse(localProfile);
+      if (profile.credits < 5) {
+        alert("Insufficient credits. Please upgrade to a Pro or Studio plan to get more credits.");
+        router.push("/pricing");
+        return;
+      }
+    }
 
-  const startProcessing = async () => {
     setLoading(true);
     try {
       let fileUrl = null;
       if (uploadedFile) {
         const formData = new FormData();
         formData.append("file", uploadedFile);
-        const uploadRes = await fetch("/api/upload/audio", {
-          method: "POST",
-          body: formData,
-        });
+        const uploadRes = await fetch("/api/upload/audio", { method: "POST", body: formData });
         const uploadData = await uploadRes.json();
-        if (uploadData.url) {
-          fileUrl = uploadData.url;
-        }
+        fileUrl = uploadData.url || URL.createObjectURL(uploadedFile);
       }
 
-      const res = await fetch("/api/projects", {
+      const endpoint = uploadedFile ? "/api/process/raw-vocal-to-song" : "/api/process/lyrics-to-song";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: title || "Untitled Project",
-          mode: selectedMode,
-          genre,
-          mood,
-          mastering_style: masteringStyle,
+          title: "AI Generated Track",
+          mode: uploadedFile ? "cover" : "ai_generate",
+          genre: style || "Pop",
+          mood: "Energetic",
+          mastering_style: "clean",
           vocal_file_url: fileUrl,
+          bpm: 120,
+          key: "C Major",
+          duration: 180,
+          prompt: lyrics,
+          customization: { isProMode: false }
         }),
       });
+
       const data = await res.json();
       if (data.project) {
-        router.push(`/projects/${data.project.id}?processing=true`);
+        if (localProfile) {
+          const profile = JSON.parse(localProfile);
+          profile.credits -= 5;
+          localStorage.setItem("demo_profile", JSON.stringify(profile));
+          window.dispatchEvent(new Event('profileUpdated'));
+        }
+        // Instead of navigating away to a project page, we could stay here,
+        // but the prompt is "make like all this", and Suno doesn't navigate away. 
+        // We'll let the user stay here and see the song pop up in the right panel!
+        setLyrics("");
+        setStyle("");
+        setUploadedFile(null);
       }
     } catch (e) {
       console.error(e);
@@ -86,217 +85,120 @@ function CreateContent() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold tracking-tight">Create New Song</h1>
-        <p className="mt-1 text-muted-foreground">Choose how you want to create your music.</p>
-      </motion.div>
-
-      <AnimatePresence mode="wait">
-        {/* Step 0: Mode Selection */}
-        {step === 0 && (
-          <motion.div
-            key="modes"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-3"
+    <div className="flex flex-col h-full bg-[#121212]">
+      {/* Top Navigation */}
+      <div className="flex items-center justify-between p-4 border-b border-white/5">
+        <div className="flex items-center gap-6 text-sm font-bold">
+          <button 
+            onClick={() => setActiveTab("simple")}
+            className={`transition-colors ${activeTab === "simple" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
           >
-            {modes.map((mode, i) => {
-              const Icon = mode.icon;
-              return (
-                <motion.button
-                  key={mode.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  onClick={() => { setSelectedMode(mode.id); setStep(1); }}
-                  className={`group flex w-full items-center gap-4 rounded-xl border p-5 text-left transition-all hover:border-violet-500/30 hover:shadow-lg hover:-translate-y-0.5 ${
-                    selectedMode === mode.id ? "border-violet-500 bg-violet-500/5" : "border-border bg-card"
-                  }`}
-                >
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${mode.color}`}>
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{mode.title}</h3>
-                    <p className="text-sm text-muted-foreground">{mode.description}</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                </motion.button>
-              );
-            })}
-          </motion.div>
+            Simple
+          </button>
+          <button 
+            onClick={() => setActiveTab("advanced")}
+            className={`transition-colors ${activeTab === "advanced" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+          >
+            Advanced
+          </button>
+          <button 
+            onClick={() => setActiveTab("sounds")}
+            className={`transition-colors ${activeTab === "sounds" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+          >
+            Sounds
+          </button>
+        </div>
+        <button className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
+          v5.5 <ChevronDown className="h-3 w-3" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 max-w-2xl mx-auto w-full">
+        
+        {/* Top Buttons */}
+        <div className="grid grid-cols-3 gap-3">
+          <label className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-sm font-semibold hover:bg-zinc-800 transition-colors cursor-pointer text-white">
+            <Music className="h-4 w-4" /> + Audio
+            <input type="file" accept="audio/*" className="hidden" onChange={handleFileUpload} />
+          </label>
+          <button className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-sm font-semibold hover:bg-zinc-800 transition-colors text-white">
+            <Mic className="h-4 w-4" /> + Voice <span className="text-[9px] bg-pink-500 text-white px-1.5 rounded uppercase ml-1">New</span>
+          </button>
+          <button className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-sm font-semibold hover:bg-zinc-800 transition-colors text-white">
+            <Zap className="h-4 w-4 text-amber-500" /> + Inspo
+          </button>
+        </div>
+
+        {uploadedFile && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl flex items-center justify-between text-emerald-500 text-xs">
+            <span>Audio loaded: {uploadedFile.name}</span>
+            <button onClick={() => setUploadedFile(null)} className="text-emerald-500 hover:underline">Remove</button>
+          </div>
         )}
 
-        {/* Step 1: Upload + Configuration */}
-        {step === 1 && (
-          <motion.div
-            key="config"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
+        {/* Lyrics Area */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <button className="flex items-center gap-1.5 text-sm font-bold text-white hover:text-zinc-300">
+              <ChevronDown className="h-4 w-4" /> Lyrics
+            </button>
+            <div className="flex items-center gap-3 text-xs font-semibold">
+              <button className="text-white bg-zinc-800 px-3 py-1 rounded-full">Write</button>
+              <button className="text-zinc-400 hover:text-white">Prompt</button>
+              <button className="text-zinc-400 hover:text-white">Instrumental</button>
+            </div>
+          </div>
+          
+          <div className="relative group">
+            <textarea
+              value={lyrics}
+              onChange={(e) => setLyrics(e.target.value)}
+              placeholder="[Verse]\nThis is where you write your rhymes\nor give our Magic Wand a try ✨\nSection [tags] can help instruct your\nsongs to feel more tight and structured"
+              className="w-full h-64 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700 resize-none leading-relaxed"
+            />
+            <div className="absolute bottom-4 left-4 flex gap-2">
+              <button className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors">
+                <Wand2 className="h-4 w-4" />
+              </button>
+              <button className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors">
+                <Sparkles className="h-4 w-4" />
+              </button>
+            </div>
+            <button className="absolute bottom-4 right-4 p-2 text-zinc-500 hover:text-white transition-colors">
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Style Area */}
+        <div className="space-y-2">
+          <button className="flex items-center gap-1.5 text-sm font-bold text-white hover:text-zinc-300 px-1">
+            <ChevronDown className="h-4 w-4" /> Styles
+          </button>
+          
+          <textarea
+            value={style}
+            onChange={(e) => setStyle(e.target.value)}
+            placeholder="double bass drum, instrumental breaks, himno, blackened death metal, a cappella"
+            className="w-full h-24 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700 resize-none leading-relaxed"
+          />
+        </div>
+
+        <div className="pt-4">
+          <button 
+            onClick={handleCreate}
+            disabled={loading}
+            className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2"
           >
-            {/* Title */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <label className="text-sm font-medium">Project Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., My First Cover"
-                className="mt-2 w-full rounded-xl border border-border bg-background py-3 px-4 text-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
-              />
-            </div>
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Music className="h-5 w-5" />}
+            {loading ? "Creating..." : "Create"}
+          </button>
+        </div>
 
-            {/* AI Generate: Prompt */}
-            {selectedMode === "ai_generate" ? (
-              <div className="rounded-xl border border-border bg-card p-6">
-                <label className="text-sm font-medium">Describe Your Song</label>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="e.g., Create a sad romantic acoustic Hindi song with soft guitar and emotional vibe."
-                  rows={4}
-                  className="mt-2 w-full rounded-xl border border-border bg-background py-3 px-4 text-sm resize-none focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
-                />
-              </div>
-            ) : (
-              /* Upload Area */
-              <div className="rounded-xl border border-border bg-card p-6">
-                <label className="text-sm font-medium">
-                  {selectedMode === "mix_master" ? "Upload Full Track" : "Upload Vocal"}
-                </label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                  onDragLeave={() => setDragActive(false)}
-                  onDrop={handleDrop}
-                  className={`mt-3 flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition-colors ${
-                    dragActive ? "border-violet-500 bg-violet-500/5" : "border-border hover:border-muted-foreground/30"
-                  }`}
-                >
-                  {uploadedFile ? (
-                    <div className="text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
-                        <Music2 className="h-6 w-6 text-emerald-500" />
-                      </div>
-                      <p className="text-sm font-medium">{uploadedFile.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB
-                      </p>
-                      <button
-                        onClick={() => setUploadedFile(null)}
-                        className="mt-3 inline-flex items-center gap-1 text-xs text-red-500 hover:underline"
-                      >
-                        <X className="h-3 w-3" /> Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="mb-3 h-8 w-8 text-muted-foreground" />
-                      <p className="text-sm font-medium">Drag & drop your audio file</p>
-                      <p className="mt-1 text-xs text-muted-foreground">MP3, WAV, M4A — up to 50MB</p>
-                      <label className="mt-4 cursor-pointer rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted">
-                        Browse Files
-                        <input
-                          type="file"
-                          accept=".mp3,.wav,.m4a,audio/*"
-                          className="hidden"
-                          onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                        />
-                      </label>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Genre & Mood */}
-            {selectedMode !== "mix_master" && (
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-card p-6">
-                  <label className="text-sm font-medium">Genre</label>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {GENRES.slice(0, 8).map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setGenre(g)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                          genre === g ? "gradient-primary text-white" : "border border-border hover:border-violet-500/30"
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border bg-card p-6">
-                  <label className="text-sm font-medium">Mood</label>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {MOODS.map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setMood(m)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                          mood === m ? "gradient-primary text-white" : "border border-border hover:border-violet-500/30"
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Mastering Style */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <label className="text-sm font-medium">Mastering Style</label>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {MASTERING_STYLES.map((s) => (
-                  <button
-                    key={s.value}
-                    onClick={() => setMasteringStyle(s.value)}
-                    className={`rounded-xl p-3 text-left transition-all ${
-                      masteringStyle === s.value
-                        ? "border-2 border-violet-500 bg-violet-500/5"
-                        : "border border-border hover:border-violet-500/20"
-                    }`}
-                  >
-                    <p className="text-sm font-medium">{s.label}</p>
-                    <p className="text-xs text-muted-foreground">{s.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setStep(0)}
-                disabled={loading}
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back
-              </button>
-              <button
-                onClick={startProcessing}
-                disabled={loading}
-                className="group flex items-center gap-2 rounded-xl gradient-primary px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
-              >
-                {loading ? "Starting..." : "Start Processing"}
-                {!loading && <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-12" />}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
-
-import { Suspense } from "react";
 
 export default function CreatePage() {
   return (

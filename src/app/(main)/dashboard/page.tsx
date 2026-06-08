@@ -5,18 +5,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  PlusCircle, Upload, Dna, Settings2, FolderOpen, GraduationCap,
-  Package, TrendingUp, Clock, Zap, ArrowRight, Music
+  PlusCircle, Upload, Dna, FolderOpen,
+  Clock, Zap, ArrowRight, Music,
+  Sliders, Download, TrendingUp
 } from "lucide-react";
 
 const quickActions = [
-  { title: "Create New Song", description: "Start from scratch", icon: PlusCircle, href: "/create", gradient: "from-violet-500 to-purple-500" },
-  { title: "Upload Vocal", description: "Drop in your recording", icon: Upload, href: "/create?mode=home_studio", gradient: "from-blue-500 to-cyan-500" },
-  { title: "Train My Voice", description: "Build your Voice DNA", icon: Dna, href: "/voice-dna", gradient: "from-pink-500 to-rose-500" },
-  { title: "Mix & Master", description: "Polish your track", icon: Settings2, href: "/create?mode=mix_master", gradient: "from-amber-500 to-orange-500" },
-  { title: "My Projects", description: "View all projects", icon: FolderOpen, href: "/projects", gradient: "from-emerald-500 to-teal-500" },
-  { title: "AI Vocal Coach", description: "Improve your singing", icon: GraduationCap, href: "/coach", gradient: "from-indigo-500 to-violet-500" },
-  { title: "Release Kit", description: "Prepare for release", icon: Package, href: "/projects", gradient: "from-fuchsia-500 to-pink-500" },
+  { title: "Create Song", description: "Text/Lyrics to Song", icon: PlusCircle, href: "/create", gradient: "from-violet-500 to-purple-500" },
+  { title: "Upload Raw Vocal", description: "Get a professional song", icon: Upload, href: "/create", gradient: "from-emerald-500 to-teal-500" },
+  { title: "Train Voice DNA", description: "Train your voice clone", icon: Dna, href: "/voice-dna", gradient: "from-fuchsia-500 to-pink-500" },
+  { title: "Mix & Master", description: "Mastering styles & presets", icon: Sliders, href: "/studio", gradient: "from-blue-500 to-cyan-500" },
+  { title: "Downloads Panel", description: "Export MP3, WAV, Stems", icon: Download, href: "/downloads", gradient: "from-amber-500 to-orange-500" },
 ];
 
 const stagger = {

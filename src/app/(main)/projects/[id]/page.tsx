@@ -5,10 +5,11 @@ import { motion } from "framer-motion";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Play, Pause, Download, Share2, RotateCcw, Music, 
-  Volume2, VolumeX, ArrowLeft, Check, Camera, MonitorPlay, Loader2
+  Volume2, VolumeX, ArrowLeft, Check, Camera, MonitorPlay, Loader2, Sliders
 } from "lucide-react";
 import Link from "next/link";
 import { MASTERING_STYLES, PROCESSING_STAGES } from "@/lib/constants";
+import { processProjectLocally } from "@/lib/audio/mockProcessor";
 
 // ============================================================
 // Deterministic Waveform Generator for visual aesthetics
@@ -92,18 +93,33 @@ function AudioPlayer({
   // When activeUrl changes, update audio src
   useEffect(() => {
     if (!audioRef.current) return;
-    const wasPlaying = playing;
-    const prevTime = audioRef.current.currentTime;
+    
+    const targetSrc = activeUrl || "";
+    const absoluteTarget = targetSrc.startsWith("http") || targetSrc.startsWith("blob")
+      ? targetSrc
+      : typeof window !== "undefined"
+      ? new URL(targetSrc, window.location.href).href
+      : targetSrc;
 
-    audioRef.current.src = activeUrl || "";
-    audioRef.current.load();
-    
-    if (prevTime && !isNaN(prevTime)) {
-      audioRef.current.currentTime = prevTime;
-    }
-    
-    if (wasPlaying && activeUrl) {
-      audioRef.current.play().catch(err => console.log("Play failed:", err));
+    if (audioRef.current.src !== absoluteTarget) {
+      const wasPlaying = playing;
+      const prevTime = audioRef.current.currentTime;
+
+      audioRef.current.src = targetSrc;
+      audioRef.current.load();
+      
+      const onLoadedMetadata = () => {
+        if (audioRef.current) {
+          if (prevTime && !isNaN(prevTime)) {
+            audioRef.current.currentTime = prevTime;
+          }
+          if (wasPlaying) {
+            audioRef.current.play().catch(err => console.log("Play failed:", err));
+          }
+        }
+      };
+      
+      audioRef.current.addEventListener("loadedmetadata", onLoadedMetadata, { once: true });
     }
   }, [activeUrl, useWebAudio]);
 
@@ -253,9 +269,7 @@ function AudioPlayer({
     }
 
     if (dryGainRef.current && wetGainRef.current) {
-      const isUsingFallbackAfter = mode === "after" && !outputFileUrl;
-      
-      if (isUsingFallbackAfter) {
+      if (mode === "after") {
         dryGainRef.current.gain.setTargetAtTime(0.0, ctx.currentTime, 0.01);
         wetGainRef.current.gain.setTargetAtTime(1.0, ctx.currentTime, 0.01);
       } else {
@@ -310,6 +324,7 @@ function AudioPlayer({
   return (
     <>
       <audio
+        key={useWebAudio ? "webaudio" : "html5"}
         ref={audioRef}
         crossOrigin={useWebAudio ? "anonymous" : undefined}
         onTimeUpdate={handleTimeUpdate}
@@ -438,55 +453,72 @@ function ProjectDetailContent() {
     fetchProject();
   }, [id]);
 
-  // Handle client-side processing simulation
+  // Handle client-side processing using actual audio engine
   useEffect(() => {
     if (!processing || !project) return;
     
+    let isSubscribed = true;
     setProgress(0);
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + Math.random() * 4 + 1.5;
-        if (next >= 100) {
-          clearInterval(interval);
-          
-          // Trigger DB update
-          fetch(`/api/projects/${id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              status: "completed",
-              output_file_url: project.vocal_file_url,
-            }),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.project) {
-                setProject(data.project);
-              }
-              setProcessing(false);
-              setLoading(false);
-            })
-            .catch((err) => {
-              console.error(err);
-              setProcessing(false);
-              setLoading(false);
-            });
-            
-          return 100;
-        }
-        
-        setCurrentStage(
-          Math.min(
-            Math.floor(next / (100 / PROCESSING_STAGES.length)),
-            PROCESSING_STAGES.length - 1
-          )
-        );
-        return next;
-      });
-    }, 250);
 
-    return () => clearInterval(interval);
-  }, [processing, id, project?.vocal_file_url]);
+    const runProcessing = async () => {
+      try {
+        await processProjectLocally({
+          projectId: id,
+          genre: project.genre || "Pop",
+          mood: project.mood || "Happy",
+          bpm: project.bpm || 120,
+          keySignature: project.key || "C Major",
+          duration: project.duration || 20,
+          mode: project.mode || "home_studio",
+          onProgress: (p, stageIdx) => {
+            if (!isSubscribed) return;
+            setProgress(p);
+            setCurrentStage(stageIdx);
+          },
+          onComplete: async (urls) => {
+            if (!isSubscribed) return;
+            
+            // Trigger DB update
+            try {
+              const res = await fetch(`/api/projects/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  status: "completed",
+                  output_file_url: urls.output_file_url,
+                }),
+              });
+              const data = await res.json();
+              
+              if (data.project) {
+                // Merge audio_blobs into the project for immediate use without refetch
+                setProject({ ...data.project, audio_blobs: urls });
+              }
+            } catch (err) {
+              console.error(err);
+            } finally {
+              setProcessing(false);
+              setLoading(false);
+            }
+          },
+          onError: (error) => {
+            console.error("Processing failed", error);
+            if (!isSubscribed) return;
+            setProcessing(false);
+            setLoading(false);
+          }
+        });
+      } catch (err) {
+        console.error("Failed to start processing", err);
+      }
+    };
+
+    runProcessing();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [processing, id, project]);
 
   const handleDownload = (type: "mp3" | "wav") => {
     const fileUrl = project?.output_file_url || project?.vocal_file_url || "https://kudivkkrmgraypstkgot.supabase.co/storage/v1/object/public/audio_uploads/demo-vocal.mp3";
@@ -669,51 +701,121 @@ function ProjectDetailContent() {
         transition={{ delay: 0.3 }}
         className="rounded-2xl border border-border bg-card p-6"
       >
-        <h3 className="text-sm font-semibold mb-4">Export & Share</h3>
+        <h3 className="text-sm font-semibold mb-4">Download Panel</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <button 
-            onClick={() => handleDownload("mp3")}
+          <a
+            href={project.audio_blobs?.output_mp3_url || `/api/download/${project.id}/mp3`}
+            download={`${project.title || "audio"}.mp3`}
             className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
           >
             <Download className="h-5 w-5 text-violet-500" />
             <div className="text-left">
-              <p className="text-sm font-medium">MP3</p>
-              <p className="text-xs text-muted-foreground">320kbps</p>
+              <p className="text-sm font-medium">Download MP3</p>
+              <p className="text-xs text-muted-foreground">320kbps compression</p>
             </div>
-          </button>
-          <button 
-            onClick={() => handleDownload("wav")}
+          </a>
+          <a
+            href={project.audio_blobs?.output_wav_url || `/api/download/${project.id}/wav`}
+            download={`${project.title || "audio"}.wav`}
             className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
           >
             <Download className="h-5 w-5 text-blue-500" />
             <div className="text-left">
-              <p className="text-sm font-medium">WAV</p>
-              <p className="text-xs text-muted-foreground">Lossless</p>
+              <p className="text-sm font-medium">Download WAV</p>
+              <p className="text-xs text-muted-foreground">Lossless studio quality</p>
             </div>
-          </button>
-          <button className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50">
-            <Camera className="h-5 w-5 text-pink-500" />
+          </a>
+          <a
+            href={project.audio_blobs?.output_flac_url || `/api/download/${project.id}/flac`}
+            download={`${project.title || "audio"}.flac`}
+            className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
+          >
+            <Download className="h-5 w-5 text-pink-500" />
             <div className="text-left">
-              <p className="text-sm font-medium">Instagram</p>
-              <p className="text-xs text-muted-foreground">Optimized</p>
+              <p className="text-sm font-medium">Download FLAC</p>
+              <p className="text-xs text-muted-foreground">Audiophile compression</p>
             </div>
-          </button>
-          <button className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50">
-            <MonitorPlay className="h-5 w-5 text-red-500" />
+          </a>
+          <a
+            href={project.audio_blobs?.instrumental_url || `/api/download/${project.id}/instrumental`}
+            download={`${project.title || "instrumental"}.wav`}
+            className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
+          >
+            <Download className="h-5 w-5 text-emerald-500" />
             <div className="text-left">
-              <p className="text-sm font-medium">YouTube</p>
-              <p className="text-xs text-muted-foreground">HD Audio</p>
+              <p className="text-sm font-medium">Instrumental</p>
+              <p className="text-xs text-muted-foreground">Acoustic track only</p>
             </div>
-          </button>
+          </a>
+          <a
+            href={project.audio_blobs?.acapella_url || `/api/download/${project.id}/acapella`}
+            download={`${project.title || "acapella"}.wav`}
+            className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
+          >
+            <Download className="h-5 w-5 text-amber-500" />
+            <div className="text-left">
+              <p className="text-sm font-medium">Acapella</p>
+              <p className="text-xs text-muted-foreground">Isolated vocal stems</p>
+            </div>
+          </a>
+          <a
+            href={project.audio_blobs?.stems_zip_url || `/api/download/${project.id}/stems`}
+            download={`${project.title || "stems"}.zip`}
+            className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
+          >
+            <Download className="h-5 w-5 text-cyan-500" />
+            <div className="text-left">
+              <p className="text-sm font-medium">Stems ZIP</p>
+              <p className="text-xs text-muted-foreground">All separate tracks</p>
+            </div>
+          </a>
+          <a
+            href={project.audio_blobs?.lyrics_txt_url || `/api/download/${project.id}/lyrics`}
+            download={`${project.title || "lyrics"}.txt`}
+            className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
+          >
+            <Download className="h-5 w-5 text-indigo-500" />
+            <div className="text-left">
+              <p className="text-sm font-medium">Lyrics TXT</p>
+              <p className="text-xs text-muted-foreground">Formatted lyrics file</p>
+            </div>
+          </a>
+          <a
+            href={project.audio_blobs?.project_zip_url || `/api/download/${project.id}/project`}
+            download={`${project.title || "project"}.zip`}
+            className="flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:border-violet-500/20 hover:bg-muted/50"
+          >
+            <Download className="h-5 w-5 text-rose-500" />
+            <div className="text-left">
+              <p className="text-sm font-medium">Project ZIP</p>
+              <p className="text-xs text-muted-foreground">Complete session bundle</p>
+            </div>
+          </a>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted">
+        <div className="mt-6 pt-4 border-t border-border flex flex-wrap gap-3">
+          <button 
+            onClick={(e) => {
+              navigator.clipboard.writeText(window.location.href);
+              const target = e.currentTarget;
+              const originalHTML = target.innerHTML;
+              target.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+              target.classList.add("text-emerald-500", "border-emerald-500/50", "bg-emerald-500/10");
+              setTimeout(() => {
+                target.innerHTML = originalHTML;
+                target.classList.remove("text-emerald-500", "border-emerald-500/50", "bg-emerald-500/10");
+              }, 2000);
+            }}
+            className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-all"
+          >
             <Share2 className="h-4 w-4" /> Share Preview
           </button>
-          <button className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted">
-            <RotateCcw className="h-4 w-4" /> Regenerate
-          </button>
+          <Link
+            href={`/editor/${project.id}`}
+            className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted"
+          >
+            <Sliders className="h-4 w-4 text-violet-500" /> Launch Song Editor
+          </Link>
           <Link
             href={`/release-kit/${project.id}`}
             className="flex items-center gap-2 rounded-xl gradient-primary px-4 py-2.5 text-sm font-semibold text-white"

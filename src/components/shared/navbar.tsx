@@ -9,21 +9,53 @@ import { useState, useRef, useEffect } from "react";
 
 export function Navbar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const [userProfile, setUserProfile] = useState<{ artist_name?: string, email?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ artist_name?: string, email?: string, credits?: number, plan?: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadUser() {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
-        setUserProfile({
-          artist_name: profile?.full_name || "Artist",
-          email: user.email,
-        });
+      // First try to load demo profile
+      const localProfile = localStorage.getItem("demo_profile");
+      if (localProfile) {
+        try {
+          const parsed = JSON.parse(localProfile);
+          setUserProfile({
+            artist_name: parsed.name || "Demo Artist",
+            email: "demo@artist.com",
+            credits: parsed.credits || 2500,
+            plan: parsed.plan || "pro"
+          });
+          return;
+        } catch (e) {}
+      }
+
+      // Fallback to Supabase if not in demo
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase.from("profiles").select("full_name, credits, plan").eq("id", user.id).single();
+          setUserProfile({
+            artist_name: profile?.full_name || "Artist",
+            email: user.email,
+            credits: profile?.credits || 2500,
+            plan: profile?.plan || "pro"
+          });
+        } else {
+          // Setup basic demo profile if not logged in
+          const defaultDemo = { name: "Demo User", credits: 2500, plan: "pro" };
+          localStorage.setItem("demo_profile", JSON.stringify(defaultDemo));
+          setUserProfile({
+            artist_name: defaultDemo.name,
+            email: "demo@user.com",
+            credits: defaultDemo.credits,
+            plan: defaultDemo.plan
+          });
+        }
+      } catch (e) {
+        // Ignored
       }
     }
     loadUser();
@@ -34,7 +66,15 @@ export function Navbar() {
       }
     }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    
+    // Listen for profile updates
+    const handleProfileUpdate = () => loadUser();
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
+    };
   }, []);
 
   return (
@@ -63,8 +103,18 @@ export function Navbar() {
       </div>
 
       {/* Right */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <ThemeToggle />
+
+        {userProfile && (
+          <div className="hidden sm:flex items-center gap-2 bg-muted/50 border border-border px-3 py-1.5 rounded-full">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span className="text-xs font-bold text-emerald-500">{userProfile.credits?.toLocaleString()} Credits</span>
+            <Link href="/pricing" className="text-[10px] bg-background border border-border px-2 py-0.5 rounded-full hover:bg-muted transition-colors uppercase font-bold text-muted-foreground ml-1">
+              {userProfile.plan === "studio" ? "Studio" : "Pro"}
+            </Link>
+          </div>
+        )}
 
         <button className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border transition-colors hover:bg-muted">
           <Bell className="h-4 w-4" />

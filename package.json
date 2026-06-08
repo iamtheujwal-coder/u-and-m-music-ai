@@ -11,9 +11,11 @@
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
+    "bullmq": "^5.78.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
+    "ioredis": "^5.11.1",
     "lucide-react": "^1.17.0",
     "next": "16.2.6",
     "pg": "^8.21.0",

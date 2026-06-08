@@ -19,6 +19,15 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setErrorMsg("");
+
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      // Demo Mode Bypass
+      setTimeout(() => {
+        window.location.href = "/onboarding";
+      }, 800);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -36,6 +45,21 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg("");
     
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      // Demo Mode Bypass
+      if (!otpSent) {
+        setTimeout(() => {
+          setOtpSent(true);
+          setLoading(false);
+        }, 800);
+      } else {
+        setTimeout(() => {
+          window.location.href = "/onboarding";
+        }, 800);
+      }
+      return;
+    }
+
     if (!otpSent) {
       const { error } = await supabase.auth.signInWithOtp({
         email,

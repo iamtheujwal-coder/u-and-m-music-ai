@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dna, Upload, Mic, Shield, Check, AlertTriangle, Play, Square, Loader2 } from "lucide-react";
+import { Dna, Upload, Mic, Shield, Check, AlertTriangle, Play, Square, Loader2, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function VoiceDNAPage() {
@@ -19,6 +19,10 @@ export default function VoiceDNAPage() {
   const [recordingVerification, setRecordingVerification] = useState(false);
   const [verified, setVerified] = useState(false);
   
+  // Demo playback state
+  const [playingDemo, setPlayingDemo] = useState(false);
+  const demoAudioRef = useRef<HTMLAudioElement | null>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -28,26 +32,69 @@ export default function VoiceDNAPage() {
   // Load existing models on mount
   useEffect(() => {
     async function checkExistingModels() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        let models = [];
 
-      const { data: models } = await supabase
-        .from("voice_models")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        if (user) {
+          const { data } = await supabase
+            .from("voice_models")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+          models = data || [];
+        } else {
+          // Demo fallback
+          const localStr = localStorage.getItem("demo_voice_models");
+          if (localStr) models = JSON.parse(localStr);
+        }
 
-      if (models && models.length > 0) {
-        // If there's already a model, skip consent and show status
-        setShowConsent(false);
-        setActiveModel(models[0]);
-        if (models[0].status === "training") {
-          resumeTraining(models[0]);
+        if (models && models.length > 0) {
+          // If there's already a model, skip consent and show status
+          setShowConsent(false);
+          setActiveModel(models[0]);
+          if (models[0].status === "training") {
+            resumeTraining(models[0]);
+          }
+        }
+      } catch (err) {
+        console.log("Demo mode or auth error", err);
+        const localStr = localStorage.getItem("demo_voice_models");
+        if (localStr) {
+          const models = JSON.parse(localStr);
+          if (models && models.length > 0) {
+            setShowConsent(false);
+            setActiveModel(models[0]);
+            if (models[0].status === "training") {
+              resumeTraining(models[0]);
+            }
+          }
         }
       }
     }
     checkExistingModels();
-  }, []);
+  }, [supabase]);
+
+  const updateModelStatus = async (modelId: string, status: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("voice_models").update({ status }).eq("id", modelId);
+      } else {
+        throw new Error("No user");
+      }
+    } catch {
+      const localStr = localStorage.getItem("demo_voice_models");
+      if (localStr) {
+        const models = JSON.parse(localStr);
+        const idx = models.findIndex((m: any) => m.id === modelId);
+        if (idx >= 0) {
+          models[idx].status = status;
+          localStorage.setItem("demo_voice_models", JSON.stringify(models));
+        }
+      }
+    }
+  };
 
   const resumeTraining = (model: any) => {
     setTraining(true);
@@ -57,7 +104,7 @@ export default function VoiceDNAPage() {
         const next = prev + Math.floor(Math.random() * 5) + 2;
         if (next >= 100) {
           clearInterval(interval);
-          supabase.from("voice_models").update({ status: "ready" }).eq("id", model.id).then(() => {
+          updateModelStatus(model.id, "ready").then(() => {
             setActiveModel({ ...model, status: "ready" });
           });
           return 100;
@@ -160,28 +207,42 @@ export default function VoiceDNAPage() {
   };
 
   const startTraining = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    let newModel;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: model, error } = await supabase
+          .from("voice_models")
+          .insert({
+            user_id: user.id,
+            name: "Voice DNA Model",
+            status: "training",
+            consent_confirmed: true,
+            sample_count: samples.length
+          })
+          .select()
+          .single();
 
-    // Create DB entry for voice model
-    const { data: model, error } = await supabase
-      .from("voice_models")
-      .insert({
-        user_id: user.id,
+        if (error) throw error;
+        newModel = model;
+      } else {
+        throw new Error("No user");
+      }
+    } catch (err) {
+      console.log("Demo mode starting training");
+      newModel = {
+        id: "demo-model-" + Date.now(),
+        user_id: "demo",
         name: "Voice DNA Model",
         status: "training",
         consent_confirmed: true,
-        sample_count: samples.length
-      })
-      .select()
-      .single();
-
-    if (error) {
-      alert("Error initiating voice model training: " + error.message);
-      return;
+        sample_count: samples.length,
+        created_at: new Date().toISOString(),
+      };
+      localStorage.setItem("demo_voice_models", JSON.stringify([newModel]));
     }
 
-    setActiveModel(model);
+    setActiveModel(newModel);
     setTraining(true);
     setTrainingProgress(0);
 
@@ -190,8 +251,8 @@ export default function VoiceDNAPage() {
         const next = prev + Math.floor(Math.random() * 4) + 1.5;
         if (next >= 100) {
           clearInterval(interval);
-          supabase.from("voice_models").update({ status: "ready" }).eq("id", model.id).then(() => {
-            setActiveModel({ ...model, status: "ready" });
+          updateModelStatus(newModel.id, "ready").then(() => {
+            setActiveModel({ ...newModel, status: "ready" });
           });
           return 100;
         }
@@ -288,6 +349,13 @@ export default function VoiceDNAPage() {
             <p className="text-sm text-muted-foreground mb-4">
               Upload or record 10 clean vocal samples to build your high-fidelity voice clone. Ensure your microphone is clear and rooms are quiet.
             </p>
+
+            <div className="mb-4 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-emerald-500 shrink-0" />
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                Premium Plan Active: You can upload extended audio files (up to 30 minutes duration) for high-resolution model tuning.
+              </p>
+            </div>
 
             <div className="mb-6">
               <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -432,12 +500,32 @@ export default function VoiceDNAPage() {
               </div>
 
               <div className="flex flex-col gap-2 max-w-xs mx-auto">
-                <button className="flex items-center justify-center gap-2 rounded-xl gradient-primary py-3 text-sm font-semibold text-white">
-                  <Play className="h-4 w-4" /> Synthesize Demo Vocal
+                <audio 
+                  ref={demoAudioRef} 
+                  src="https://kudivkkrmgraypstkgot.supabase.co/storage/v1/object/public/audio_uploads/demo-vocal.mp3" 
+                  onEnded={() => setPlayingDemo(false)} 
+                />
+                <button 
+                  onClick={() => {
+                    if (playingDemo) {
+                      demoAudioRef.current?.pause();
+                    } else {
+                      demoAudioRef.current?.play();
+                    }
+                    setPlayingDemo(!playingDemo);
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-xl gradient-primary py-3 text-sm font-semibold text-white transition-all hover:scale-[1.02]"
+                >
+                  {playingDemo ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  {playingDemo ? "Stop Demo" : "Synthesize Demo Vocal"}
                 </button>
                 <button 
                   onClick={async () => {
-                    await supabase.from("voice_models").delete().eq("id", activeModel.id);
+                    try {
+                      await supabase.from("voice_models").delete().eq("id", activeModel.id);
+                    } catch (e) {
+                      localStorage.removeItem("demo_voice_models");
+                    }
                     setActiveModel(null);
                     setSamples([]);
                     setVerified(false);

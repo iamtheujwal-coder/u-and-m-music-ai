@@ -1,15 +1,21 @@
 // ============================================================
-// U&M Music AI — Constants
+// UANM Music AI — Constants (Complete Platform)
 // ============================================================
 
-export const APP_NAME = "U&M Music AI";
-export const APP_TAGLINE = "Your AI Music Studio at Home.";
-export const APP_DESCRIPTION = "Turn your raw voice into a studio-quality song. Record from home. Upload your vocals. Let AI clean, mix, master, and produce your music.";
+export const APP_NAME = "UANM Music AI";
+export const APP_TAGLINE = "Professional Sound From Home.";
+export const APP_DESCRIPTION = "The complete AI operating system for singers, artists, and music creators. Upload vocals, train your voice, create songs, master tracks, and grow your audience — all from home.";
 
 export const GENRES = [
   "Bollywood Pop", "Indie Pop", "Acoustic", "R&B", "Hip Hop",
   "Classical", "Lo-fi", "EDM", "Rock", "Jazz", "Ghazal",
   "Sufi", "Folk", "Devotional", "K-Pop Style",
+] as const;
+
+export const COMPOSER_GENRES = [
+  "Bollywood", "Pop", "Rock", "EDM", "Hip Hop",
+  "Lo-fi", "Acoustic", "Classical", "Assamese", "Regional",
+  "R&B", "Jazz", "Indie", "Folk", "Sufi",
 ] as const;
 
 export const MOODS = [
@@ -20,7 +26,7 @@ export const MOODS = [
 export const LANGUAGES = [
   "Hindi", "English", "Punjabi", "Tamil", "Telugu",
   "Bengali", "Marathi", "Gujarati", "Kannada", "Malayalam",
-  "Urdu", "Spanish", "Korean", "Japanese", "Other",
+  "Urdu", "Spanish", "Korean", "Japanese", "Assamese", "Other",
 ] as const;
 
 export const SKILL_LEVELS = [
@@ -48,6 +54,56 @@ export const MASTERING_STYLES = [
   { value: "natural_vocal", label: "Natural Vocal", description: "Voice-forward, minimal processing" },
 ] as const;
 
+export const PLATFORM_PRESETS = [
+  { value: "spotify", label: "Spotify", icon: "🎵", lufs: -14, description: "Integrated loudness -14 LUFS" },
+  { value: "youtube", label: "YouTube", icon: "📺", lufs: -14, description: "Normalized to -14 LUFS" },
+  { value: "instagram", label: "Instagram", icon: "📱", lufs: -14, description: "Short-form optimized" },
+  { value: "apple_music", label: "Apple Music", icon: "🍎", lufs: -16, description: "Sound Check at -16 LUFS" },
+  { value: "radio", label: "Radio", icon: "📻", lufs: -9, description: "Broadcast ready -9 LUFS" },
+  { value: "bollywood", label: "Bollywood", icon: "🎬", lufs: -11, description: "Industry standard" },
+  { value: "indie", label: "Indie", icon: "🎸", lufs: -14, description: "Organic dynamics" },
+  { value: "lofi", label: "Lo-fi", icon: "☕", lufs: -16, description: "Warm & relaxed" },
+  { value: "acoustic", label: "Acoustic", icon: "🪕", lufs: -18, description: "Maximum dynamics" },
+] as const;
+
+export const EXPORT_FORMATS = [
+  { value: "mp3", label: "MP3", description: "Compressed, universal compatibility", bitrate: "320kbps" },
+  { value: "wav", label: "WAV", description: "Lossless, studio quality", bitrate: "24-bit/48kHz" },
+  { value: "flac", label: "FLAC", description: "Lossless compressed, audiophile grade", bitrate: "24-bit" },
+] as const;
+
+export const STUDIO_EFFECTS = [
+  { id: "noise_removal", label: "Noise Removal", description: "Remove background noise", icon: "🔇", category: "cleanup" },
+  { id: "echo_removal", label: "Echo Removal", description: "Remove room echo & reverb", icon: "🏠", category: "cleanup" },
+  { id: "breath_cleanup", label: "Breath Cleanup", description: "Reduce breath sounds", icon: "💨", category: "cleanup" },
+  { id: "pitch_correction", label: "Pitch Correction", description: "Natural pitch alignment", icon: "🎯", category: "tuning" },
+  { id: "auto_tune", label: "Auto-Tune", description: "Signature vocal effect", icon: "🤖", category: "tuning" },
+  { id: "vocal_enhancement", label: "Vocal Enhancement", description: "Presence & brightness boost", icon: "✨", category: "enhance" },
+  { id: "vocal_thickening", label: "Vocal Thickening", description: "Add body & fullness", icon: "🎤", category: "enhance" },
+  { id: "harmony_generation", label: "Harmony Generation", description: "AI-generated harmonies", icon: "🎶", category: "creative" },
+  { id: "double_tracking", label: "Double Tracking", description: "Realistic vocal doubling", icon: "👥", category: "creative" },
+  { id: "smart_eq", label: "Smart EQ", description: "Intelligent frequency sculpting", icon: "📊", category: "mix" },
+  { id: "smart_compression", label: "Smart Compression", description: "Dynamic range control", icon: "📈", category: "mix" },
+  { id: "ai_mixing", label: "AI Mixing", description: "Automatic level balancing", icon: "🎛️", category: "mix" },
+  { id: "ai_mastering", label: "AI Mastering", description: "Final polish & loudness", icon: "💎", category: "master" },
+] as const;
+
+export const VOICE_ANALYSIS_METRICS = [
+  { key: "vocal_range", label: "Vocal Range", icon: "📏", description: "Total singing range in octaves" },
+  { key: "timbre", label: "Timbre", icon: "🎨", description: "Tonal color & texture" },
+  { key: "vibrato", label: "Vibrato", icon: "〰️", description: "Natural vibrato strength" },
+  { key: "vocal_strength", label: "Vocal Strength", icon: "💪", description: "Power & projection" },
+  { key: "emotional_style", label: "Emotional Style", icon: "❤️", description: "Emotional expressiveness" },
+  { key: "language_adaptability", label: "Language Adaptability", icon: "🌍", description: "Multi-language capability" },
+  { key: "singing_consistency", label: "Singing Consistency", icon: "🎯", description: "Performance reliability" },
+] as const;
+
+export const TRAINING_LEVELS = [
+  { value: "starter", label: "Starter", audio: "15–30 min", description: "Basic voice clone", samples: "5–10 samples" },
+  { value: "pro", label: "Pro", audio: "1–2 hours", description: "High-fidelity clone", samples: "15–30 samples" },
+  { value: "studio_level", label: "Studio", audio: "5+ hours", description: "Professional-grade model", samples: "50+ samples" },
+] as const;
+
 export const PROCESSING_STAGES = [
   { id: "noise", label: "Cleaning room noise", description: "Removing background interference" },
   { id: "clarity", label: "Enhancing vocal clarity", description: "Making your voice shine" },
@@ -55,6 +111,24 @@ export const PROCESSING_STAGES = [
   { id: "mix", label: "Building studio mix", description: "Blending all elements together" },
   { id: "master", label: "Mastering final sound", description: "Professional polish & loudness" },
   { id: "export", label: "Preparing export", description: "Getting your song ready" },
+] as const;
+
+export const SONG_STRUCTURES = [
+  "Intro-Verse-Chorus-Verse-Chorus-Bridge-Chorus-Outro",
+  "Verse-Chorus-Verse-Chorus-Bridge-Chorus",
+  "Intro-Verse-Pre-Chorus-Chorus-Verse-Chorus",
+  "Verse-Verse-Bridge-Verse",
+  "AABA (Standard)",
+  "Intro-Hook-Verse-Hook-Outro",
+] as const;
+
+export const KEY_SIGNATURES = [
+  "C Major", "C Minor", "C# Major", "C# Minor",
+  "D Major", "D Minor", "D# Major", "D# Minor",
+  "E Major", "E Minor", "F Major", "F Minor",
+  "F# Major", "F# Minor", "G Major", "G Minor",
+  "G# Major", "G# Minor", "A Major", "A Minor",
+  "A# Major", "A# Minor", "B Major", "B Minor",
 ] as const;
 
 export const PRICING_PLANS = [
@@ -69,6 +143,7 @@ export const PRICING_PLANS = [
       "2 projects per month",
       "Basic vocal cleanup",
       "MP3 export",
+      "AI Vocal Coach (basic)",
       "Community support",
     ],
     highlighted: false,
@@ -83,10 +158,11 @@ export const PRICING_PLANS = [
     description: "For growing singers",
     features: [
       "20 projects per month",
-      "HD audio export",
+      "HD audio export (WAV)",
       "AI mix & master",
       "Before/after comparison",
       "All mastering styles",
+      "Cover Studio access",
       "Email support",
     ],
     highlighted: false,
@@ -100,12 +176,16 @@ export const PRICING_PLANS = [
     period: "month",
     description: "For serious artists",
     features: [
-      "Unlimited basic projects",
-      "WAV lossless export",
+      "Unlimited projects",
+      "WAV + FLAC lossless export",
       "Voice DNA training",
       "Advanced AI mastering",
-      "Release kit generator",
-      "AI Vocal Coach",
+      "UANM Studio (all effects)",
+      "Composer & Dream Song Engine",
+      "AI Producer feedback",
+      "Release Kit generator",
+      "AI Vocal Coach (full)",
+      "Career OS analytics",
       "Priority support",
     ],
     highlighted: true,
@@ -122,10 +202,31 @@ export const PRICING_PLANS = [
       "Everything in Pro",
       "Team access (5 seats)",
       "Bulk processing",
+      "Collaboration hub",
       "Client project management",
       "Priority rendering",
       "Dedicated support",
       "API access",
+    ],
+    highlighted: false,
+    cta: "Get Studio",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: 0,
+    currency: "₹",
+    period: "custom",
+    description: "For labels & organizations",
+    features: [
+      "Everything in Studio",
+      "Unlimited seats",
+      "Custom voice models",
+      "White-label option",
+      "SLA guarantee",
+      "Custom integrations",
+      "Dedicated account manager",
+      "On-premise deployment",
     ],
     highlighted: false,
     cta: "Contact Sales",
@@ -139,6 +240,7 @@ export const ACCEPTED_AUDIO_TYPES = [
   "audio/mp4",
   "audio/x-m4a",
   "audio/m4a",
+  "audio/flac",
 ] as const;
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -152,11 +254,20 @@ export const TICKET_CATEGORIES = [
 ] as const;
 
 export const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { href: "/create", label: "Create Song", icon: "PlusCircle" },
-  { href: "/projects", label: "My Projects", icon: "FolderOpen" },
-  { href: "/voice-dna", label: "Voice DNA", icon: "Dna" },
-  { href: "/coach", label: "AI Vocal Coach", icon: "GraduationCap" },
-  { href: "/pricing", label: "Pricing", icon: "CreditCard" },
-  { href: "/support", label: "Support", icon: "HelpCircle" },
+  { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard", section: "main" },
+  { href: "/create", label: "Create Song", icon: "PlusCircle", section: "core" },
+  { href: "/studio", label: "Mix & Master", icon: "Sliders", section: "core" },
+  { href: "/composer", label: "Composer", icon: "Music", section: "core" },
+  { href: "/projects", label: "My Projects", icon: "FolderOpen", section: "core" },
+  { href: "/voice-dna", label: "Voice DNA", icon: "Dna", section: "core" },
+  { href: "/downloads", label: "Downloads", icon: "Download", section: "core" },
+  { href: "/pricing", label: "Pricing", icon: "CreditCard", section: "other" },
+  { href: "/support", label: "Support", icon: "HelpCircle", section: "other" },
 ] as const;
+
+export const NAV_SECTIONS = [
+  { id: "main", label: "" },
+  { id: "core", label: "Core MVP" },
+  { id: "other", label: "" },
+] as const;
+
